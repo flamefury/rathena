@@ -646,7 +646,7 @@ struct Battle_Config
 	int guild_alliance_onlygm;
 	int feature_achievement;
 	int allow_bound_sell;
-	int event_refine_chance;
+	int feature_refineui;
 	int autoloot_adjust;
 	int feature_petevolution;
 	int feature_pet_autofeed;
@@ -681,7 +681,6 @@ struct Battle_Config
 	int ping_timer_interval;
 	int ping_time;
 	int show_skill_scale;
-	int feature_refineui;
 
 #include "../custom/battle_config_struct.inc"
 };

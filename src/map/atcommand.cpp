@@ -10555,6 +10555,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEFR(changedress, ATCMD_NOCONSOLE|ATCMD_NOAUTOTRADE),
 		ACMD_DEFR(camerainfo, ATCMD_NOCONSOLE|ATCMD_NOAUTOTRADE),
 		ACMD_DEFR(resurrect, ATCMD_NOCONSOLE),
+		ACMD_DEFR(refineui, ATCMD_NOCONSOLE|ATCMD_NOAUTOTRADE),
 		ACMD_DEF2("setquest", quest),
 		ACMD_DEF2("erasequest", quest),
 		ACMD_DEF2("completequest", quest),
