@@ -5569,6 +5569,7 @@ static struct Damage initialize_weapon_data(struct block_list *src, struct block
 				wd.blewcount = 0;
 				break;
 
+			case KO_HAPPOKUNAI:
 #ifdef RENEWAL
 			case KN_BRANDISHSPEAR:
 				wd.flag |= BF_LONG;
