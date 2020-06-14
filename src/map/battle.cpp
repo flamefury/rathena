@@ -3377,19 +3377,15 @@ static void battle_calc_skill_base_damage(struct Damage* wd, struct block_list *
 			break;
 		case KO_HAPPOKUNAI:
 			if(sd) {
-				short index = sd->equip_index[EQI_AMMO];
-				int damagevalue = 3 * (
-#ifdef RENEWAL
-					2 *
-#endif
-					sstatus->batk + sstatus->rhw.atk + (index >= 0 && sd->inventory_data[index] ?
-						sd->inventory_data[index]->atk : 0)) * (skill_lv + 5) / 5;
-				if (sc && sc->data[SC_KAGEMUSYA])
-					damagevalue += damagevalue * sc->data[SC_KAGEMUSYA]->val2 / 100;
+				battle_calc_damage_parts(wd, src, target, skill_id, skill_lv);
+				int64 workingAtk = wd->statusAtk + wd->weaponAtk + wd->equipAtk + wd->masteryAtk;
+				int skillratio = 50 * skill_lv;
+				RE_LVL_DMOD(100);
+
+				int damagevalue = workingAtk * skillratio / 100 +
+					workingAtk * pc_checkskill(sd, NJ_TOBIDOUGU) / 4;
+
 				ATK_ADD(wd->damage, wd->damage2, damagevalue);
-#ifdef RENEWAL
-				ATK_ADD(wd->weaponAtk, wd->weaponAtk2, damagevalue);
-#endif
 			} else
 				ATK_ADD(wd->damage, wd->damage2, 5000);
 			break;
@@ -5184,6 +5180,11 @@ static void battle_calc_attack_post_defense(struct Damage* wd, struct block_list
 			if( (sstatus->rhw.ele) == ELE_WIND || (sstatus->lhw.ele) == ELE_WIND )
 				ATK_ADDRATE(wd->damage, wd->damage2, 25);
 			break;
+
+		case KO_HAPPOKUNAI:
+			if (sc && sc->data[SC_KAGEMUSYA])
+				ATK_ADDRATE(wd->damage, wd->damage2, sc->data[SC_KAGEMUSYA]->val2)
+			break;
 	}
 }
 
@@ -5731,13 +5732,14 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 
 		ATK_ADD(wd.damage, wd.damage2, ratio);
 		RE_ALLATK_ADD(&wd, ratio);
+		//ShowInfo(" 5742: %d\n", wd.damage);
 
 #ifdef RENEWAL
 		if(skill_id == HW_MAGICCRASHER) { // Add weapon attack for MATK onto Magic Crasher
 			struct status_data *sstatus = status_get_status_data(src);
 
 			if (sstatus->matk_max > sstatus->matk_min) {
-				ATK_ADD(wd.weaponAtk, wd.weaponAtk2, sstatus->matk_min+rnd()%(sstatus->matk_max-sstatus->matk_min));
+				ATK_ADD(wd.weaponAtk, wd.weaponAtk2, (int64)sstatus->matk_min+rnd()%(sstatus->matk_max-sstatus->matk_min));
 			} else
 				ATK_ADD(wd.weaponAtk, wd.weaponAtk2, sstatus->matk_min);
 		}
@@ -5766,8 +5768,11 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 		battle_attack_sc_bonus(&wd, src, target, skill_id, skill_lv);
 
 		if (sd) { //monsters, homuns and pets have their damage computed directly
-			wd.damage = wd.statusAtk + wd.weaponAtk + wd.equipAtk + wd.masteryAtk;
-			wd.damage2 = wd.statusAtk2 + wd.weaponAtk2 + wd.equipAtk2 + wd.masteryAtk2;
+
+			if (skill_id != KO_HAPPOKUNAI) {
+				wd.damage = wd.statusAtk + wd.weaponAtk + wd.equipAtk + wd.masteryAtk;
+				wd.damage2 = wd.statusAtk2 + wd.weaponAtk2 + wd.equipAtk2 + wd.masteryAtk2;
+			}
 			if (wd.flag & BF_SHORT)
 				ATK_ADDRATE(wd.damage, wd.damage2, sd->bonus.short_attack_atk_rate);
 			if(wd.flag&BF_LONG && (skill_id != RA_WUGBITE && skill_id != RA_WUGSTRIKE)) //Long damage rate addition doesn't use weapon + equip attack
@@ -5927,8 +5932,7 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 		case PA_SACRIFICE:
 		case RK_DRAGONBREATH:
 		case RK_DRAGONBREATH_WATER:
-		case NC_SELFDESTRUCTION:
-		case KO_HAPPOKUNAI: {
+		case NC_SELFDESTRUCTION: {
 				int64 tmp = wd.damage;
 
 				if (sd) {
@@ -5938,13 +5942,6 @@ static struct Damage battle_calc_weapon_attack(struct block_list *src, struct bl
 							wd.damage = battle_attr_fix(src, target, tmp, right_element, tstatus->def_ele, tstatus->ele_lv);
 							if (!wd.damage)
 								wd.damage = battle_attr_fix(src, target, tmp, ELE_NEUTRAL, tstatus->def_ele, tstatus->ele_lv);
-						}
-					} else if (skill_id == KO_HAPPOKUNAI) {
-						wd.damage = battle_attr_fix(src, target, wd.damage, (sd->bonus.arrow_ele) ? sd->bonus.arrow_ele : ELE_NEUTRAL, tstatus->def_ele, tstatus->ele_lv);
-						if (wd.damage > 0) {
-							wd.damage = battle_attr_fix(src, target, tmp, right_element, tstatus->def_ele, tstatus->ele_lv);
-							if (!wd.damage)
-								wd.damage = battle_attr_fix(src, target, tmp, (sd->bonus.arrow_ele) ? sd->bonus.arrow_ele : ELE_NEUTRAL, tstatus->def_ele, tstatus->ele_lv);
 						}
 					} else
 						wd.damage = battle_attr_fix(src, target, wd.damage, right_element, tstatus->def_ele, tstatus->ele_lv);
